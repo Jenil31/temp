@@ -1,0 +1,237 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `brfss2013`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("brfss2013.RData")
+```
+
+
+
+* * *
+
+## Part 1: Data
+
+
+#### Why can we use this dataset to answer questions
+
+The Behavioral Risk Factor Surveillance System (BRFSS) is the nation’s premier system of health-related telephone surveys that collect state data about U.S. residents regarding their health-related risk behaviors, chronic health conditions, and use of preventive services. Established in 1984 with 15 states, BRFSS now collects data in all 50 states as well as the District of Columbia and three U.S. territories. BRFSS completes more than 400,000 adult interviews each year, making it the largest continuously conducted health survey system in the world. Dataset contains 491,775 entries and 330 total columns which provides valuable information about factors that are responsible for ill-health of US citizens. This dataset can be used to answer health related questions concerning US citizens.
+
+
+
+#### How Data was Collected
+
+With technical and methodological assistance from CDC, state health departments use in-house interviewers or contract with telephone call centers or universities to administer the BRFSS surveys continuously through the year. The states use a standardized core questionnaire, optional modules, and state-added questions. The survey is conducted using Random Digit Dialing (RDD) techniques on both landlines and cell phones. 
+
+
+
+#### Scope of inference - generalizability
+
+As stated above randomness was used in data collection process. The fact that participants were randomly sampled that show study's results are generalizable.  
+
+
+
+#### Scope of inference - causality
+
+No random assignment was used when gathering data. Nature of the study is observational which means this data can not be used to show causal relationships. It only describes correlation.
+
+
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+
+Is there any realation between health and relationships? Sometimes people feel depressed when they get divorce or their partner passes away. I will mainly check realation of relationships with depression, heart attack and stroke.
+
+**Variables of Interest:**  marital, addepev2, cvdinfr4, cvdstrk3
+
+
+
+
+
+**Research quesion 2:**
+
+How sleep is realted to our physical and mental Health? Is sleep have same relation with physical and mental health or Is there any difference?
+
+**Variables of Interest:**  sleptim1, physhlth, menthlth
+
+
+
+
+**Research quesion 3:**
+How general health is related to exercies? Is there any relation?
+
+**Variables of Interest:**  genhlth, strength
+
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button (green button with orange arrow) above. Make sure that your code is visible
+in the project you submit. Delete this note when before you submit your work.
+
+
+
+
+**Research quesion 1:**
+
+```{r}
+
+marital_health <- brfss2013 %>%
+  filter(!is.na(marital),!is.na(cvdinfr4),!is.na(cvdstrk3),!is.na(addepev2)) %>%
+  select(marital,cvdinfr4,cvdstrk3,addepev2)
+
+marital_health <- marital_health %>%
+  group_by(marital) %>%
+  mutate(total_count = n())
+
+marital_health <- marital_health %>%
+  filter(cvdinfr4 == 'Yes') %>%
+  group_by(marital) %>%
+  mutate(yes_heart_attack = n()) 
+
+marital_health <- marital_health %>%
+  filter(cvdstrk3 == 'Yes') %>%
+  group_by(marital) %>%
+  mutate(yes_stroke = n()) 
+
+marital_health <- marital_health %>%
+  filter(addepev2 == 'Yes') %>%
+  group_by(marital) %>%
+  mutate(yes_depression = n()) 
+
+heart_attack<-marital_health %>%
+  group_by(marital) %>%
+  summarise(heart_attack_per = (mean(yes_heart_attack) / mean(total_count))*100) %>%
+  arrange(desc(heart_attack_per))
+  
+stroke<-marital_health %>%
+  group_by(marital) %>%
+  summarise(stroke_per = (mean(yes_stroke) / mean(total_count))*100) %>%
+  arrange(desc(stroke_per))
+
+depression<-marital_health %>%
+  group_by(marital) %>%
+  summarise(depression_per = (mean(yes_depression) / mean(total_count))*100) %>%
+  arrange(desc(depression_per))
+
+```
+
+```{r}
+
+ggplot(data=heart_attack,aes(x=reorder(marital,-heart_attack_per),y=heart_attack_per))+
+  geom_bar(stat='identity') +
+  xlab("Marital Status") +
+  ylab("Heart Attack Percentage") + 
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+
+```
+
+```{r}
+
+ggplot(data=stroke,aes(x=reorder(marital,-stroke_per),y=stroke_per))+
+  geom_bar(stat='identity') +
+  xlab("Marital Status") +
+  ylab("Stroke Percentage") + 
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+
+```
+
+```{r}
+
+ggplot(data=depression,aes(x=reorder(marital,-depression_per),y=depression_per))+
+  geom_bar(stat='identity') +
+  xlab("Marital Status") +
+  ylab("Depression Percentage") + 
+  theme(axis.text.x=element_text(angle=45, hjust=1))
+
+```
+
+
+
+**Based on above graph** we can say that people who are separated, widowed or divorced tends to have depression, heart attack and stroke more than Married people. We can say that there may exists relation between these variables.  
+
+
+
+**Research quesion 2:**
+
+```{r}
+sleeptime_health <- brfss2013 %>%
+  filter(!is.na(sleptim1),!is.na(physhlth),!is.na(menthlth)) %>%
+  filter(sleptim1 >= 1 & sleptim1 <= 24) %>%
+  select(sleptim1,physhlth,menthlth)
+
+sleeptime_health<-sleeptime_health %>%
+  group_by(sleptim1) %>%
+  summarise_all(funs(mean))
+
+sleeptime_health
+
+```
+
+```{r}
+
+ggplot(data=sleeptime_health,aes(x=sleptim1,y=physhlth))+geom_bar(stat='identity')+xlab("Sleep time in hour per day")+ylab("Avg days Physical Health not Good")
+
+```
+
+```{r}
+
+ggplot(data=sleeptime_health,aes(x=sleptim1,y=menthlth))+geom_bar(stat='identity')+xlab("Sleep time in hour per day")+ylab("Avg days Mental Health not Good")
+
+```
+
+**Based on above Graph** We can say that sleep has non-linear relation with our health condition. We can observe that when people get sleep between 6 to 9 hours daily, there are very few days when they feel not good. There is also a correlation between physical and mental health condition. They both follows same distribution over sleep time.
+
+
+
+
+
+**Research quesion 3:**
+
+```{r}
+ghealth_exercies <- brfss2013 %>%
+  filter(!is.na(genhlth),!is.na(strength)) %>%
+  select(genhlth,strength)
+
+ghealth_exercies<-ghealth_exercies %>%
+  group_by(genhlth) %>%
+  summarize(avg_exercies_days = mean(strength)) %>% 
+  arrange(desc(avg_exercies_days))
+
+ghealth_exercies
+
+ggplot(data=ghealth_exercies,aes(x=genhlth,y=avg_exercies_days))+geom_bar(stat='identity')+xlab("General Health Condition")+ylab("Avg Exercise Days in a Year")
+
+
+```
+
+**Based on above Graph**:   We can observe that there is a realtion between exercies and general health condition associated with people. People who do exercise regularly tends to have better health condition on the other hand people who don't do exercies tends to have poor health condition.
+
+**Again These only shows correlation not causation**
+
+
